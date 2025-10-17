@@ -218,14 +218,14 @@ async def test_run_git_command_async_success() -> None:
 
 async def test_run_git_command_async_timeout() -> None:
     """Test that async git command handles timeouts."""
-    from unittest.mock import AsyncMock
+    from unittest.mock import AsyncMock, Mock
 
     from gittyup.git_operations import run_git_command_async
 
     with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec:
         mock_process = AsyncMock()
         mock_process.communicate.side_effect = TimeoutError()
-        mock_process.kill = AsyncMock()
+        mock_process.kill = Mock()  # kill() is synchronous, not async
         mock_process.wait = AsyncMock()
         mock_exec.return_value = mock_process
 
