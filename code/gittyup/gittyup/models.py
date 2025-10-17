@@ -47,6 +47,7 @@ class ScanConfig:
     verbose: bool = False
     quiet: bool = False
     no_color: bool = False
+    max_workers: int = 4
 
 
 @dataclass

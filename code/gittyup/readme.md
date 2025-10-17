@@ -6,6 +6,8 @@ A professional-grade CLI tool that automatically discovers and updates all Git r
 
 - **Automatic Discovery**: Recursively scans directories to find all Git repositories
 - **Batch Updates**: Pulls updates from all discovered repositories in one command
+- **Parallel Processing**: ⚡ Updates multiple repositories concurrently for speed (configurable workers)
+- **Configuration Files**: Support for `.gittyup.yaml` files for project-specific settings
 - **Smart Exclusions**: Automatically skips common directories like `node_modules`, `venv`, etc.
 - **Colored Output**: Beautiful, easy-to-read colored terminal output
 - **Safety First**: Skips repositories with uncommitted changes to prevent conflicts
@@ -77,6 +79,9 @@ Options:
   --exclude PATTERN    Exclude directories matching pattern (can be repeated)
   --strategy {pull,fetch,rebase}
                        Update strategy (default: pull)
+  --workers N          Number of concurrent workers (default: 4)
+  --sequential         Disable parallel processing (equivalent to --workers 1)
+  --no-config          Ignore configuration files
   -w, --wordy          Increase output verbosity
   -q, --quiet          Minimize output (errors only)
   --no-color           Disable colored output
@@ -88,6 +93,8 @@ Examples:
   gittyup ~/projects         # Scan specific directory
   gittyup --dry-run          # Preview what would be done
   gittyup --max-depth 2      # Limit traversal depth
+  gittyup --workers 8        # Use 8 concurrent workers for faster updates
+  gittyup --sequential       # Update repositories one at a time
   gittyup -w                 # Verbose output
 ```
 
@@ -109,6 +116,60 @@ Summary:
   ⚠ Skipped: 2
   ✗ Failed: 1
   ⏱ Duration: 8.3s
+```
+
+## Configuration Files
+
+Gitty Up supports configuration files for project-specific or user-wide settings. Configuration files are optional and will be automatically loaded if present.
+
+### Configuration Precedence
+
+1. **Command-line arguments** (highest priority)
+2. **Local config**: `.gittyup.yaml` in current directory
+3. **User config**: `~/.config/gittyup/config.yaml`
+4. **Built-in defaults** (lowest priority)
+
+### Example Configuration File
+
+Create a `.gittyup.yaml` file in your project root:
+
+```yaml
+# Directory scanning
+max_depth: 3
+exclude:
+  - node_modules
+  - venv
+  - .venv
+  - build
+  - dist
+
+# Git operations
+strategy: pull
+pull_all_branches: true
+
+# Performance
+max_workers: 8
+
+# Output
+verbose: false
+no_color: false
+```
+
+### Available Configuration Options
+
+- `max_depth`: Maximum directory depth to traverse (integer or null)
+- `exclude`: List of directory names to exclude
+- `strategy`: Update strategy (`pull`, `fetch`, or `rebase`)
+- `max_workers`: Number of concurrent workers (default: 4)
+- `verbose`: Enable verbose output (boolean)
+- `no_color`: Disable colored output (boolean)
+
+### Disabling Configuration Files
+
+Use `--no-config` to ignore all configuration files:
+
+```bash
+gittyup --no-config
 ```
 
 ## Default Exclusions
@@ -150,12 +211,13 @@ ruff check --fix .
 
 ## How It Works
 
-1. **Scan**: Recursively traverses the specified directory tree
-2. **Discover**: Identifies Git repositories by looking for `.git` directories
-3. **Filter**: Applies exclusion patterns to skip unwanted directories
-4. **Check**: Examines each repository for uncommitted changes
-5. **Update**: Executes `git pull` (or chosen strategy) on clean repositories
-6. **Report**: Displays results with colored output and summary statistics
+1. **Load Config**: Loads configuration from files (if present) and merges with CLI arguments
+2. **Scan**: Recursively traverses the specified directory tree
+3. **Discover**: Identifies Git repositories by looking for `.git` directories
+4. **Filter**: Applies exclusion patterns to skip unwanted directories
+5. **Check**: Examines each repository for uncommitted changes
+6. **Update**: Executes `git pull` (or chosen strategy) on clean repositories concurrently
+7. **Report**: Displays results with colored output and summary statistics
 
 ## Safety Features
 
