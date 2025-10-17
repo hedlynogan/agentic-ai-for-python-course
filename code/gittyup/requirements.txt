@@ -1,0 +1,11 @@
+colorama==0.4.6
+coverage==7.11.0
+-e file:///Users/michaelkennedy/github/courses/agentic-ai/agentic-ai-for-python-course/code/gittyup
+iniconfig==2.1.0
+packaging==25.0
+pluggy==1.6.0
+pygments==2.19.2
+pytest==8.4.2
+pytest-asyncio==1.2.0
+pytest-cov==7.0.0
+ruff==0.14.1
