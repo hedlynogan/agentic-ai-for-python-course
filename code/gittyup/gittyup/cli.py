@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from gittyup import __version__, config, constants, git_operations, reporter
-from gittyup.models import RepoState, RepoStatus, ScanConfig, SummaryStats
+from gittyup.models import OutputFormat, RepoState, RepoStatus, ScanConfig, SummaryStats
 from gittyup.scanner import scan_directory
 
 
@@ -75,6 +75,12 @@ Examples:
         help="Update strategy (default: pull)",
     )
 
+    parser.add_argument(
+        "--stash",
+        action="store_true",
+        help="Stash changes before pulling, pop after",
+    )
+
     # Output control
     parser.add_argument(
         "--wordy",
@@ -91,6 +97,13 @@ Examples:
 
     parser.add_argument(
         "--no-color", action="store_true", help="Disable colored output"
+    )
+
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
     )
 
     # Performance
@@ -178,7 +191,7 @@ def process_repositories(config: ScanConfig) -> SummaryStats:
 
     stats.repos_found = len(repos)
 
-    if not config.quiet:
+    if not config.quiet and config.output_format == OutputFormat.TEXT:
         reporter.print_repos_found(stats.repos_found, config.no_color)
 
     # Early return if no repos found
@@ -186,7 +199,7 @@ def process_repositories(config: ScanConfig) -> SummaryStats:
         return stats
 
     # Print section header
-    if not config.quiet:
+    if not config.quiet and config.output_format == OutputFormat.TEXT:
         if config.dry_run:
             reporter.print_section_header(
                 "Dry run (no changes will be made):", config.no_color
@@ -215,11 +228,13 @@ def process_repositories(config: ScanConfig) -> SummaryStats:
             )
         else:
             # Actually pull the repository
-            result = git_operations.pull_repository(repo, config.strategy)
+            result = git_operations.pull_repository(
+                repo, config.strategy, config.stash_before_pull
+            )
 
         stats.add_result(result)
 
-        if not config.quiet:
+        if not config.quiet and config.output_format == OutputFormat.TEXT:
             reporter.report_repo_processing(result, config.verbose, config.no_color)
 
     return stats
@@ -256,9 +271,11 @@ async def process_repository_async(
         )
     else:
         # Actually pull the repository
-        result = await git_operations.pull_repository_async(repo, config.strategy)
+        result = await git_operations.pull_repository_async(
+            repo, config.strategy, config.stash_before_pull
+        )
 
-    return result, not config.quiet
+    return result, not config.quiet and config.output_format == OutputFormat.TEXT
 
 
 async def process_repositories_async(scan_config: ScanConfig) -> SummaryStats:
@@ -284,7 +301,7 @@ async def process_repositories_async(scan_config: ScanConfig) -> SummaryStats:
 
     stats.repos_found = len(repos)
 
-    if not scan_config.quiet:
+    if not scan_config.quiet and scan_config.output_format == OutputFormat.TEXT:
         reporter.print_repos_found(stats.repos_found, scan_config.no_color)
 
     # Early return if no repos found
@@ -292,7 +309,7 @@ async def process_repositories_async(scan_config: ScanConfig) -> SummaryStats:
         return stats
 
     # Print section header
-    if not scan_config.quiet:
+    if not scan_config.quiet and scan_config.output_format == OutputFormat.TEXT:
         if scan_config.dry_run:
             reporter.print_section_header(
                 "Dry run (no changes will be made):", scan_config.no_color
@@ -370,6 +387,9 @@ def main() -> int:
         # If CLI patterns provided, add them to the file config patterns
         exclude_patterns = list(set(exclude_patterns + args.exclude_patterns))
 
+    # Parse output format
+    output_format = OutputFormat.JSON if args.format == "json" else OutputFormat.TEXT
+
     # Build configuration
     scan_config = ScanConfig(
         root_path=args.path.resolve(),
@@ -381,13 +401,15 @@ def main() -> int:
         quiet=args.quiet,
         no_color=merged_config.get("no_color", False),
         max_workers=merged_config.get("max_workers", constants.DEFAULT_MAX_WORKERS),
+        stash_before_pull=args.stash,
+        output_format=output_format,
     )
 
     # Initialize colors
     reporter.initialize_colors(scan_config.no_color)
 
-    # Print header
-    if not scan_config.quiet:
+    # Print header (only for text output)
+    if not scan_config.quiet and scan_config.output_format == OutputFormat.TEXT:
         reporter.print_header(scan_config.root_path, scan_config.no_color)
 
     # Process repositories (use async for parallel, sync for sequential/single worker)
@@ -398,8 +420,10 @@ def main() -> int:
         stats = process_repositories(scan_config)
     stats.duration_seconds = time.time() - start_time
 
-    # Print summary
-    if not scan_config.quiet:
+    # Output results based on format
+    if scan_config.output_format == OutputFormat.JSON:
+        reporter.report_json(stats)
+    elif not scan_config.quiet:
         reporter.report_summary(stats, scan_config.no_color)
 
     # Determine exit code

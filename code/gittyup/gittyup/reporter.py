@@ -1,5 +1,6 @@
 """Output formatting and reporting."""
 
+import json
 from pathlib import Path
 
 from colorama import init as colorama_init
@@ -150,3 +151,13 @@ def report_summary(stats: SummaryStats, no_color: bool = False) -> None:
     # Duration
     duration_msg = f"  {constants.SYMBOL_CLOCK} Duration: {stats.duration_seconds:.1f}s"
     print(format_with_color(duration_msg, constants.COLOR_INFO, no_color))
+
+
+def report_json(stats: SummaryStats) -> None:
+    """
+    Output results in JSON format.
+
+    Args:
+        stats: Summary statistics to output
+    """
+    print(json.dumps(stats.to_dict(), indent=2))

@@ -11,6 +11,8 @@ A professional-grade CLI tool that automatically discovers and updates all Git r
 - **Smart Exclusions**: Automatically skips common directories like `node_modules`, `venv`, etc.
 - **Colored Output**: Beautiful, easy-to-read colored terminal output
 - **Safety First**: Skips repositories with uncommitted changes to prevent conflicts
+- **Stash Support**: 🆕 Optionally stash uncommitted changes before pulling and restore after
+- **JSON Output**: 🆕 Machine-readable JSON output format for automation
 - **Flexible**: Multiple update strategies (pull, fetch, rebase)
 - **Informative**: Shows current branch and update status for each repository
 
@@ -79,12 +81,14 @@ Options:
   --exclude PATTERN    Exclude directories matching pattern (can be repeated)
   --strategy {pull,fetch,rebase}
                        Update strategy (default: pull)
+  --stash              Stash changes before pulling, pop after
   --workers N          Number of concurrent workers (default: 4)
   --sequential         Disable parallel processing (equivalent to --workers 1)
   --no-config          Ignore configuration files
   -w, --wordy          Increase output verbosity
   -q, --quiet          Minimize output (errors only)
   --no-color           Disable colored output
+  --format {text,json} Output format (default: text)
   --version            Show version information
   -h, --help           Show this help message
 
@@ -95,6 +99,8 @@ Examples:
   gittyup --max-depth 2      # Limit traversal depth
   gittyup --workers 8        # Use 8 concurrent workers for faster updates
   gittyup --sequential       # Update repositories one at a time
+  gittyup --stash            # Stash uncommitted changes before pulling
+  gittyup --format json      # Output results as JSON
   gittyup -w                 # Verbose output
 ```
 
@@ -116,6 +122,50 @@ Summary:
   ⚠ Skipped: 2
   ✗ Failed: 1
   ⏱ Duration: 8.3s
+```
+
+## Advanced Features
+
+### Stash Support
+
+When you have repositories with uncommitted changes, Gitty Up normally skips them to avoid conflicts. With the `--stash` flag, you can automatically stash changes before pulling and restore them after:
+
+```bash
+gittyup --stash
+```
+
+This is useful when you want to update all repositories including those with work-in-progress changes. The stash is automatically popped after pulling completes successfully.
+
+### JSON Output
+
+For automation and scripting, you can output results in JSON format:
+
+```bash
+gittyup --format json > results.json
+```
+
+Example JSON output:
+```json
+{
+  "summary": {
+    "repos_found": 5,
+    "repos_updated": 3,
+    "repos_skipped": 1,
+    "repos_failed": 1,
+    "duration_seconds": 8.32
+  },
+  "repositories": [
+    {
+      "path": "/path/to/repo1",
+      "state": "success",
+      "branch": "main",
+      "message": "Already up to date",
+      "error": null,
+      "has_uncommitted_changes": false,
+      "commits_pulled": 0
+    }
+  ]
+}
 ```
 
 ## Configuration Files

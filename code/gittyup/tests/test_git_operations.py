@@ -6,8 +6,10 @@ from unittest.mock import patch
 from gittyup.git_operations import (
     get_current_branch,
     has_uncommitted_changes,
+    pop_stash,
     pull_repository,
     run_git_command,
+    stash_changes,
 )
 from gittyup.models import RepoState, UpdateStrategy
 
@@ -307,3 +309,112 @@ async def test_pull_repository_async_with_uncommitted_changes() -> None:
 
         assert result.state == RepoState.SKIPPED
         assert result.has_uncommitted_changes is True
+
+
+def test_stash_changes_success() -> None:
+    """Test stashing changes successfully."""
+    with patch("gittyup.git_operations.run_git_command") as mock_run:
+        mock_run.return_value = (0, "Saved working directory", "")
+
+        success, message = stash_changes(Path("/tmp/repo"))
+
+        assert success is True
+        assert message == "Changes stashed"
+        mock_run.assert_called_once_with(Path("/tmp/repo"), ["stash", "push", "-u"])
+
+
+def test_stash_changes_no_changes() -> None:
+    """Test stashing when there are no changes."""
+    with patch("gittyup.git_operations.run_git_command") as mock_run:
+        mock_run.return_value = (0, "No local changes to save", "")
+
+        success, message = stash_changes(Path("/tmp/repo"))
+
+        assert success is True
+        assert message == "No changes to stash"
+
+
+def test_stash_changes_failure() -> None:
+    """Test stashing changes failure."""
+    with patch("gittyup.git_operations.run_git_command") as mock_run:
+        mock_run.return_value = (1, "", "fatal: error")
+
+        success, message = stash_changes(Path("/tmp/repo"))
+
+        assert success is False
+        assert message == "fatal: error"
+
+
+def test_pop_stash_success() -> None:
+    """Test popping stash successfully."""
+    with patch("gittyup.git_operations.run_git_command") as mock_run:
+        mock_run.return_value = (0, "Dropped refs/stash@{0}", "")
+
+        success, message = pop_stash(Path("/tmp/repo"))
+
+        assert success is True
+        assert message == "Stash popped successfully"
+        mock_run.assert_called_once_with(Path("/tmp/repo"), ["stash", "pop"])
+
+
+def test_pop_stash_failure() -> None:
+    """Test popping stash failure."""
+    with patch("gittyup.git_operations.run_git_command") as mock_run:
+        mock_run.return_value = (1, "", "fatal: No stash entries found")
+
+        success, message = pop_stash(Path("/tmp/repo"))
+
+        assert success is False
+        assert message == "fatal: No stash entries found"
+
+
+def test_pull_repository_with_stash() -> None:
+    """Test pulling with stash enabled."""
+    with (
+        patch("gittyup.git_operations.get_current_branch", return_value="main"),
+        patch("gittyup.git_operations.has_uncommitted_changes", return_value=True),
+        patch("gittyup.git_operations.stash_changes", return_value=(True, "Stashed")),
+        patch("gittyup.git_operations.run_git_command") as mock_run,
+        patch("gittyup.git_operations.pop_stash", return_value=(True, "Popped")),
+    ):
+        mock_run.return_value = (0, "Already up to date", "")
+
+        result = pull_repository(Path("/tmp/repo"), stash_before_pull=True)
+
+        assert result.state == RepoState.SUCCESS
+        assert "stash" in result.message.lower()
+
+
+def test_pull_repository_stash_failure() -> None:
+    """Test pulling when stash fails."""
+    with (
+        patch("gittyup.git_operations.get_current_branch", return_value="main"),
+        patch("gittyup.git_operations.has_uncommitted_changes", return_value=True),
+        patch(
+            "gittyup.git_operations.stash_changes",
+            return_value=(False, "Stash failed"),
+        ),
+    ):
+        result = pull_repository(Path("/tmp/repo"), stash_before_pull=True)
+
+        assert result.state == RepoState.FAILED
+        assert result.message == "Failed to stash changes"
+        assert result.error == "Stash failed"
+
+
+def test_pull_repository_pop_stash_failure() -> None:
+    """Test pulling when pop stash fails."""
+    with (
+        patch("gittyup.git_operations.get_current_branch", return_value="main"),
+        patch("gittyup.git_operations.has_uncommitted_changes", return_value=True),
+        patch("gittyup.git_operations.stash_changes", return_value=(True, "Stashed")),
+        patch("gittyup.git_operations.run_git_command") as mock_run,
+        patch("gittyup.git_operations.pop_stash", return_value=(False, "Pop failed")),
+    ):
+        mock_run.return_value = (0, "Already up to date", "")
+
+        result = pull_repository(Path("/tmp/repo"), stash_before_pull=True)
+
+        assert result.state == RepoState.FAILED
+        assert "pop stash" in result.message.lower()
+        assert result.error == "Pop failed"

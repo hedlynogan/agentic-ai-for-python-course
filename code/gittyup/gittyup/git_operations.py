@@ -69,8 +69,44 @@ def has_uncommitted_changes(repo_path: Path) -> bool:
     return returncode == 0 and bool(stdout)
 
 
-def pull_repository(
-    repo_path: Path, strategy: UpdateStrategy = UpdateStrategy.PULL
+def stash_changes(repo_path: Path) -> tuple[bool, str]:
+    """
+    Stash uncommitted changes in a repository.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        Tuple of (success, message)
+    """
+    returncode, stdout, stderr = run_git_command(repo_path, ["stash", "push", "-u"])
+    if returncode == 0:
+        if "No local changes to save" in stdout:
+            return True, "No changes to stash"
+        return True, "Changes stashed"
+    return False, stderr or stdout
+
+
+def pop_stash(repo_path: Path) -> tuple[bool, str]:
+    """
+    Pop the most recent stash in a repository.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        Tuple of (success, message)
+    """
+    returncode, stdout, stderr = run_git_command(repo_path, ["stash", "pop"])
+    if returncode == 0:
+        return True, "Stash popped successfully"
+    return False, stderr or stdout
+
+
+def pull_repository(  # noqa: C901
+    repo_path: Path,
+    strategy: UpdateStrategy = UpdateStrategy.PULL,
+    stash_before_pull: bool = False,
 ) -> RepoStatus:
     """
     Pull updates for a repository.
@@ -78,6 +114,7 @@ def pull_repository(
     Args:
         repo_path: Path to the repository
         strategy: Update strategy to use
+        stash_before_pull: If True, stash changes before pulling and pop after
 
     Returns:
         RepoStatus object with operation results
@@ -88,14 +125,31 @@ def pull_repository(
     # Check for uncommitted changes
     has_changes = has_uncommitted_changes(repo_path)
 
+    # Track if we stashed changes
+    stashed = False
+
     if has_changes:
-        return RepoStatus(
-            path=repo_path,
-            state=RepoState.SKIPPED,
-            branch=branch,
-            message="Uncommitted changes detected",
-            has_uncommitted_changes=True,
-        )
+        if stash_before_pull:
+            # Try to stash changes
+            success, message = stash_changes(repo_path)
+            if not success:
+                return RepoStatus(
+                    path=repo_path,
+                    state=RepoState.FAILED,
+                    branch=branch,
+                    message="Failed to stash changes",
+                    error=message,
+                    has_uncommitted_changes=True,
+                )
+            stashed = True
+        else:
+            return RepoStatus(
+                path=repo_path,
+                state=RepoState.SKIPPED,
+                branch=branch,
+                message="Uncommitted changes detected",
+                has_uncommitted_changes=True,
+            )
 
     # Execute pull based on strategy
     match strategy:
@@ -137,6 +191,23 @@ def pull_repository(
         else:
             message = "Updated"
             commits_pulled = 1
+
+    # Pop stash if we stashed changes
+    if stashed:
+        pop_success, pop_message = pop_stash(repo_path)
+        if not pop_success:
+            return RepoStatus(
+                path=repo_path,
+                state=RepoState.FAILED,
+                branch=branch,
+                message="Pull succeeded but failed to pop stash",
+                error=pop_message,
+                has_uncommitted_changes=True,
+            )
+        if message == "Already up to date":
+            message = "Stashed, pulled, and restored changes"
+        else:
+            message = f"{message} (stash restored)"
 
     return RepoStatus(
         path=repo_path,
@@ -226,8 +297,48 @@ async def has_uncommitted_changes_async(repo_path: Path) -> bool:
     return returncode == 0 and bool(stdout)
 
 
-async def pull_repository_async(
-    repo_path: Path, strategy: UpdateStrategy = UpdateStrategy.PULL
+async def stash_changes_async(repo_path: Path) -> tuple[bool, str]:
+    """
+    Stash uncommitted changes in a repository asynchronously.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        Tuple of (success, message)
+    """
+    returncode, stdout, stderr = await run_git_command_async(
+        repo_path, ["stash", "push", "-u"]
+    )
+    if returncode == 0:
+        if "No local changes to save" in stdout:
+            return True, "No changes to stash"
+        return True, "Changes stashed"
+    return False, stderr or stdout
+
+
+async def pop_stash_async(repo_path: Path) -> tuple[bool, str]:
+    """
+    Pop the most recent stash in a repository asynchronously.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        Tuple of (success, message)
+    """
+    returncode, stdout, stderr = await run_git_command_async(
+        repo_path, ["stash", "pop"]
+    )
+    if returncode == 0:
+        return True, "Stash popped successfully"
+    return False, stderr or stdout
+
+
+async def pull_repository_async(  # noqa: C901
+    repo_path: Path,
+    strategy: UpdateStrategy = UpdateStrategy.PULL,
+    stash_before_pull: bool = False,
 ) -> RepoStatus:
     """
     Pull updates for a repository asynchronously.
@@ -235,6 +346,7 @@ async def pull_repository_async(
     Args:
         repo_path: Path to the repository
         strategy: Update strategy to use
+        stash_before_pull: If True, stash changes before pulling and pop after
 
     Returns:
         RepoStatus object with operation results
@@ -245,14 +357,31 @@ async def pull_repository_async(
     # Check for uncommitted changes
     has_changes = await has_uncommitted_changes_async(repo_path)
 
+    # Track if we stashed changes
+    stashed = False
+
     if has_changes:
-        return RepoStatus(
-            path=repo_path,
-            state=RepoState.SKIPPED,
-            branch=branch,
-            message="Uncommitted changes detected",
-            has_uncommitted_changes=True,
-        )
+        if stash_before_pull:
+            # Try to stash changes
+            success, message = await stash_changes_async(repo_path)
+            if not success:
+                return RepoStatus(
+                    path=repo_path,
+                    state=RepoState.FAILED,
+                    branch=branch,
+                    message="Failed to stash changes",
+                    error=message,
+                    has_uncommitted_changes=True,
+                )
+            stashed = True
+        else:
+            return RepoStatus(
+                path=repo_path,
+                state=RepoState.SKIPPED,
+                branch=branch,
+                message="Uncommitted changes detected",
+                has_uncommitted_changes=True,
+            )
 
     # Execute pull based on strategy
     match strategy:
@@ -294,6 +423,23 @@ async def pull_repository_async(
         else:
             message = "Updated"
             commits_pulled = 1
+
+    # Pop stash if we stashed changes
+    if stashed:
+        pop_success, pop_message = await pop_stash_async(repo_path)
+        if not pop_success:
+            return RepoStatus(
+                path=repo_path,
+                state=RepoState.FAILED,
+                branch=branch,
+                message="Pull succeeded but failed to pop stash",
+                error=pop_message,
+                has_uncommitted_changes=True,
+            )
+        if message == "Already up to date":
+            message = "Stashed, pulled, and restored changes"
+        else:
+            message = f"{message} (stash restored)"
 
     return RepoStatus(
         path=repo_path,
