@@ -6,24 +6,66 @@
     <title>Podcast Episodes</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <style>
+        /* Dark grey hero/navigation */
+        .hero.is-dark-grey {
+            background-color: #2b2b2b;
+            color: white;
+        }
+        
+        .hero.is-dark-grey .title,
+        .hero.is-dark-grey .subtitle {
+            color: white;
+        }
+        
         .episode-card {
             margin-bottom: 1.5rem;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 4px solid #ff6b6b;
         }
+        
         .episode-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+            border-left-color: #ff5252;
         }
+        
         .show-notes {
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+        
+        .card-footer-item {
+            color: #ff6b6b;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        .card-footer-item:hover {
+            background-color: #ff6b6b;
+            color: white !important;
+        }
+        
+        .progress.is-bold {
+            background-color: #e0e0e0;
+        }
+        
+        .progress.is-bold::-webkit-progress-value {
+            background-color: #ff6b6b;
+        }
+        
+        .progress.is-bold::-moz-progress-bar {
+            background-color: #ff6b6b;
+        }
+        
+        .notification.is-danger {
+            background-color: #ff5252;
+        }
     </style>
 </head>
 <body>
-    <section class="hero is-primary">
+    <section class="hero is-dark-grey">
         <div class="hero-body">
             <div class="container">
                 <h1 class="title">
@@ -40,7 +82,7 @@
         <div class="container">
             <div id="episodes-container"></div>
             <div id="loading" class="has-text-centered">
-                <progress class="progress is-primary" max="100">Loading...</progress>
+                <progress class="progress is-bold" max="100">Loading...</progress>
             </div>
             <div id="error" class="notification is-danger is-hidden"></div>
         </div>

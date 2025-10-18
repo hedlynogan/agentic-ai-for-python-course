@@ -6,21 +6,82 @@
     <title>Episode Details</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <style>
+        /* Dark grey hero/navigation */
+        .hero.is-dark-grey {
+            background-color: #2b2b2b;
+            color: white;
+        }
+        
+        .hero.is-dark-grey .title {
+            color: white;
+        }
+        
         .audio-player {
             width: 100%;
             margin: 2rem 0;
         }
+        
         .show-notes-full {
             line-height: 1.6;
             white-space: pre-wrap;
         }
+        
         .back-button {
             margin-bottom: 2rem;
+        }
+        
+        .back-button .button {
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        .back-button .button:hover {
+            background-color: #363636;
+        }
+        
+        .box {
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .button.is-bold {
+            background-color: #ff6b6b;
+            border-color: #ff6b6b;
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        .button.is-bold:hover {
+            background-color: #ff5252;
+            border-color: #ff5252;
+        }
+        
+        .progress.is-bold {
+            background-color: #e0e0e0;
+        }
+        
+        .progress.is-bold::-webkit-progress-value {
+            background-color: #ff6b6b;
+        }
+        
+        .progress.is-bold::-moz-progress-bar {
+            background-color: #ff6b6b;
+        }
+        
+        .notification.is-danger {
+            background-color: #ff5252;
+        }
+        
+        audio {
+            width: 100%;
         }
     </style>
 </head>
 <body>
-    <section class="hero is-primary">
+    <section class="hero is-dark-grey">
         <div class="hero-body">
             <div class="container">
                 <h1 class="title" id="episode-title">
@@ -33,14 +94,14 @@
     <section class="section">
         <div class="container">
             <div class="back-button">
-                <a href="index.html" class="button is-light">
+                <a href="index.html" class="button">
                     <span>← Back to Episodes</span>
                 </a>
             </div>
 
             <div id="episode-details"></div>
             <div id="loading" class="has-text-centered">
-                <progress class="progress is-primary" max="100">Loading...</progress>
+                <progress class="progress is-bold" max="100">Loading...</progress>
             </div>
             <div id="error" class="notification is-danger is-hidden"></div>
         </div>
@@ -106,7 +167,7 @@
 
                         <div class="buttons">
                             <a href="${escapeHtml(episode.mp3_link)}" 
-                               class="button is-primary" 
+                               class="button is-bold" 
                                download
                                target="_blank">
                                 Download Episode
