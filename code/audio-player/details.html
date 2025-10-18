@@ -42,8 +42,8 @@
             background-color: #363636;
         }
         
-        .box {
-            border-left: 4px solid #ff6b6b;
+        .episode-content {
+            padding: 0;
         }
         
         .button.is-bold {
@@ -149,7 +149,7 @@
 
                 // Create episode details
                 detailsContainer.innerHTML = `
-                    <div class="box">
+                    <div class="episode-content">
                         <h2 class="title is-3">${escapeHtml(episode.title)}</h2>
                         
                         <div class="content">
