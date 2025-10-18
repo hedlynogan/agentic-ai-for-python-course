@@ -152,17 +152,17 @@
                     <div class="episode-content">
                         <h2 class="title is-3">${escapeHtml(episode.title)}</h2>
                         
-                        <div class="content">
-                            <h3 class="subtitle is-5">Show Notes</h3>
-                            <p class="show-notes-full">${escapeHtml(episode.show_nows)}</p>
-                        </div>
-
                         <div class="audio-player">
                             <h3 class="subtitle is-5">Audio Player</h3>
                             <audio controls class="audio-player">
                                 <source src="${escapeHtml(episode.mp3_link)}" type="audio/mpeg">
                                 Your browser does not support the audio element.
                             </audio>
+                        </div>
+
+                        <div class="content">
+                            <h3 class="subtitle is-5">Show Notes</h3>
+                            <p class="show-notes-full">${escapeHtml(episode.show_nows)}</p>
                         </div>
 
                         <div class="buttons">
