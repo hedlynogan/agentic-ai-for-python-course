@@ -19,7 +19,7 @@ Last Updated: October 16, 2025
 
 ## Code Style
 
-- Follow PEP8 and Fuff's formatting guidelines.
+- Follow PEP8 and Ruff's formatting guidelines.
 - Use guarding clauses with if + early returns rather than nested code.
 - Never use `type | None` for optional types. Use `Optional[type]` instead.
 - When specifying type information, please use builtin types if possible. An example is use `list[int]` over `typing.List[int]`.
@@ -74,6 +74,5 @@ raise DiscordConfigError('Error')
 # ❌ Wrong
 from talkpython.services.discord_service import load_discord_config
 from talkpython.services import discord_models
-```
 ````
 
